@@ -1,34 +1,36 @@
 /* eslint-disable prefer-const */
 import { Pair, Token, Bundle } from '../types/schema'
 import { BigDecimal, Address } from '@graphprotocol/graph-ts/index'
-import { ZERO_BD, factoryContract, ADDRESS_ZERO, ONE_BD } from './helpers'
+import { ZERO_BD, factoryContract, ONE_BD, ZERO_ADDRESS } from './helpers'
 
 const WBNB_ADDRESS = '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c'
 const BUSD_WBNB_PAIR = '0x1b96b92314c44b159149f7e0303511fb2fc4774f' // created block 589414
-const DAI_WBNB_PAIR = '0xf3010261b58b2874639ca2e860e9005e3be5de0b'  // created block 481116
 const USDT_WBNB_PAIR = '0x20bcc3b8a0091ddac2d0bc30f68e6cbb97de59cd' // created block 648115
 
-export function getEthPriceInUSD(): BigDecimal {
+export function getEthPriceInUSD(pair: Pair): BigDecimal {
   // fetch eth prices for each stablecoin
-  let usdtPair = Pair.load(USDT_WBNB_PAIR) // usdt is token0
-  let busdPair = Pair.load(BUSD_WBNB_PAIR) // busd is token1
-  let daiPair = Pair.load(DAI_WBNB_PAIR)   // dai is token0
+  let usdtPair: Pair | null;
+  if (pair.id == USDT_WBNB_PAIR) {
+    usdtPair = pair;
+  } else {
+    usdtPair = Pair.load(USDT_WBNB_PAIR)
+  }
 
-  // all 3 have been created
-  if (daiPair !== null && busdPair !== null && usdtPair !== null) {
-    let totalLiquidityBNB = daiPair.reserve1.plus(busdPair.reserve0).plus(usdtPair.reserve1)
-    let daiWeight = daiPair.reserve1.div(totalLiquidityBNB)
-    let busdWeight = busdPair.reserve0.div(totalLiquidityBNB)
-    let usdtWeight = usdtPair.reserve1.div(totalLiquidityBNB)
-    return daiPair.token0Price
-      .times(daiWeight)
-      .plus(busdPair.token1Price.times(busdWeight))
-      .plus(usdtPair.token0Price.times(usdtWeight))
-    // busd and usdt have been created
-  } else if (busdPair !== null && usdtPair !== null) {
-    let totalLiquidityBNB = busdPair.reserve0.plus(usdtPair.reserve1)
-    let busdWeight = busdPair.reserve0.div(totalLiquidityBNB)
-    let usdtWeight = usdtPair.reserve1.div(totalLiquidityBNB)
+  let busdPair: Pair | null;
+  if (pair.id == BUSD_WBNB_PAIR) {
+    busdPair = pair;
+  } else {
+    busdPair = Pair.load(BUSD_WBNB_PAIR)
+  }
+
+  // usdt is token0
+  // busd is token1
+  if (busdPair !== null && usdtPair !== null) {
+    const busdtReserve = busdPair.reserve0;
+    const usdtReserve = usdtPair.reserve1;
+    let totalLiquidityBNB = busdtReserve.plus(usdtReserve)
+    let busdWeight = busdtReserve.div(totalLiquidityBNB)
+    let usdtWeight = usdtReserve.div(totalLiquidityBNB)
     return busdPair.token1Price.times(busdWeight).plus(usdtPair.token0Price.times(usdtWeight))
     // usdt is the only pair so far
   } else if (busdPair !== null) {
@@ -55,7 +57,7 @@ let WHITELIST: string[] = [
 ]
 
 // minimum liquidity for price to get tracked
-let MINIMUM_LIQUIDITY_THRESHOLD_ETH = BigDecimal.fromString('2')
+const MINIMUM_LIQUIDITY_THRESHOLD_ETH = BigDecimal.fromString('2')
 
 /**
  * Search through graph to find derived Eth per token.
@@ -67,15 +69,16 @@ export function findEthPerToken(token: Token): BigDecimal {
   }
   // loop through whitelist and check if paired with any
   for (let i = 0; i < WHITELIST.length; ++i) {
+    // TODO: Remove rpc call by storing pairs
     let pairAddress = factoryContract.getPair(Address.fromString(token.id), Address.fromString(WHITELIST[i]))
-    if (pairAddress.toHexString() != ADDRESS_ZERO) {
-      let pair = Pair.load(pairAddress.toHexString())
+    if (!pairAddress.equals(ZERO_ADDRESS)) {
+      let pair = Pair.load(pairAddress.toHexString())!
       if (pair.token0 == token.id && pair.reserveETH.gt(MINIMUM_LIQUIDITY_THRESHOLD_ETH)) {
-        let token1 = Token.load(pair.token1)
+        let token1 = Token.load(pair.token1)!
         return pair.token1Price.times(token1.derivedETH as BigDecimal) // return token1 per our token * Eth per token 1
       }
       if (pair.token1 == token.id && pair.reserveETH.gt(MINIMUM_LIQUIDITY_THRESHOLD_ETH)) {
-        let token0 = Token.load(pair.token0)
+        let token0 = Token.load(pair.token0)!
         return pair.token0Price.times(token0.derivedETH as BigDecimal) // return token0 per our token * ETH per token 0
       }
     }
@@ -90,17 +93,21 @@ export function findEthPerToken(token: Token): BigDecimal {
  * If neither is, return 0
  */
 export function getTrackedVolumeUSD(
+  ethPrice: BigDecimal,
+  token0Id: string,
   tokenAmount0: BigDecimal,
-  token0: Token,
+  token0ETH: BigDecimal,
+  token1Id: string,
   tokenAmount1: BigDecimal,
-  token1: Token
+  token1ETH: BigDecimal
 ): BigDecimal {
-  let bundle = Bundle.load('1')
-  let price0 = token0.derivedETH.times(bundle.ethPrice)
-  let price1 = token1.derivedETH.times(bundle.ethPrice)
+  let price0 = token0ETH.times(ethPrice)
+  let price1 = token1ETH.times(ethPrice)
+  const incldue0 = WHITELIST.includes(token0Id);
+  const incldue1 = WHITELIST.includes(token1Id);
 
   // both are whitelist tokens, take average of both amounts
-  if (WHITELIST.includes(token0.id) && WHITELIST.includes(token1.id)) {
+  if (incldue0 && incldue1) {
     return tokenAmount0
       .times(price0)
       .plus(tokenAmount1.times(price1))
@@ -108,12 +115,12 @@ export function getTrackedVolumeUSD(
   }
 
   // take full value of the whitelisted token amount
-  if (WHITELIST.includes(token0.id) && !WHITELIST.includes(token1.id)) {
+  if (incldue0 && !incldue1) {
     return tokenAmount0.times(price0)
   }
 
   // take full value of the whitelisted token amount
-  if (!WHITELIST.includes(token0.id) && WHITELIST.includes(token1.id)) {
+  if (!incldue0 && incldue1) {
     return tokenAmount1.times(price1)
   }
 
@@ -128,18 +135,20 @@ export function getTrackedVolumeUSD(
  * If neither is, return 0
  */
 export function getTrackedLiquidityUSD(
-  bundle: Bundle,
+  ethPrice: BigDecimal,
+  token0Id: string,
   tokenAmount0: BigDecimal,
-  token0: Token,
+  token0ETH: BigDecimal,
+  token1Id: string,
   tokenAmount1: BigDecimal,
-  token1: Token
+  token1ETH: BigDecimal
 ): BigDecimal {
-  let price0 = token0.derivedETH.times(bundle.ethPrice)
-  let price1 = token1.derivedETH.times(bundle.ethPrice)
+  const price0 = token0ETH.times(ethPrice)
+  const price1 = token1ETH.times(ethPrice)
 
   // both are whitelist tokens, take average of both amounts
-  let incldue0 = WHITELIST.includes(token0.id);
-  let incldue1 = WHITELIST.includes(token1.id);
+  const incldue0 = WHITELIST.includes(token0Id);
+  const incldue1 = WHITELIST.includes(token1Id);
   if (incldue0 && incldue1) {
     return tokenAmount0.times(price0).plus(tokenAmount1.times(price1))
   }
