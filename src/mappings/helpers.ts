@@ -96,7 +96,6 @@ export function fetchToken(id: string, address: Address): Token | null {
   }
   result.name = nameValue;
 
-  let totalSupplyValue = null
   let totalSupplyResult = contract.try_totalSupply()
   if (!totalSupplyResult.reverted) {
     result.totalSupply = totalSupplyResult.value;

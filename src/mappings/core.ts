@@ -1,5 +1,5 @@
 /* eslint-disable prefer-const */
-import { BigInt, BigDecimal, store } from '@graphprotocol/graph-ts'
+import { BigInt, BigDecimal, store, log } from '@graphprotocol/graph-ts'
 import {
   Pair,
   Token,
@@ -238,9 +238,16 @@ export function handleMint(event: Mint): void {
   const bundle = Bundle.load('1')!
   const ethPrice = bundle.ethPrice
 
+  log.debug("Try to get 0", [])
+  const sender = event.parameters[0].value.toAddress()
+  log.debug("Try to get 1", [])
+  const amount0 = event.parameters[1].value.toBigInt()
+  log.debug("Try to get 2", [])
+  const amount1 = event.parameters[1].value.toBigInt()
+  log.debug("Finished", [])
   // update exchange info (except balances, sync will cover that)
-  const token0Amount = convertTokenToDecimal(event.params.amount0, token0.decimals.toI32())
-  const token1Amount = convertTokenToDecimal(event.params.amount1, token1.decimals.toI32())
+  const token0Amount = convertTokenToDecimal(amount0, token0.decimals.toI32())
+  const token1Amount = convertTokenToDecimal(amount1, token1.decimals.toI32())
 
   // update txn counts
   token0.txCount = token0.txCount.plus(ONE_BI)
@@ -256,7 +263,7 @@ export function handleMint(event: Mint): void {
     .plus(token0.derivedETH.times(token0Amount))
     .times(ethPrice)
 
-  mint.sender = event.params.sender
+  mint.sender = sender
   mint.amount0 = token0Amount as BigDecimal
   mint.amount1 = token1Amount as BigDecimal
   mint.logIndex = event.logIndex
