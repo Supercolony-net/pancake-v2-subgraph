@@ -99,9 +99,10 @@ export function fetchToken(id: string, address: Address): Token | null {
   let totalSupplyValue = null
   let totalSupplyResult = contract.try_totalSupply()
   if (!totalSupplyResult.reverted) {
-    totalSupplyValue = totalSupplyResult.value.toI32()
+    result.totalSupply = totalSupplyResult.value;
+  } else {
+    result.totalSupply = ZERO_BI;
   }
-  result.totalSupply = BigInt.fromI32(totalSupplyValue as i32);
 
   return result;
 }
