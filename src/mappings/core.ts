@@ -227,6 +227,13 @@ export function handleSync(event: Sync): void {
 }
 
 export function handleMint(event: Mint): void {
+  log.info("Try to get 0", [])
+  const sender = event.parameters[0].value.toAddress()
+  log.info("Try to get 1", [])
+  const amount0 = event.parameters[1].value.toBigInt()
+  log.info("Try to get 2", [])
+  const amount1 = event.parameters[1].value.toBigInt()
+  log.info("Finished", [])
   const transaction = Transaction.load(event.transaction.hash.toHexString())!
   const mints = transaction.mints
   const mint = MintEvent.load(mints[mints.length - 1])!
@@ -238,13 +245,6 @@ export function handleMint(event: Mint): void {
   const bundle = Bundle.load('1')!
   const ethPrice = bundle.ethPrice
 
-  log.debug("Try to get 0", [])
-  const sender = event.parameters[0].value.toAddress()
-  log.debug("Try to get 1", [])
-  const amount0 = event.parameters[1].value.toBigInt()
-  log.debug("Try to get 2", [])
-  const amount1 = event.parameters[1].value.toBigInt()
-  log.debug("Finished", [])
   // update exchange info (except balances, sync will cover that)
   const token0Amount = convertTokenToDecimal(amount0, token0.decimals.toI32())
   const token1Amount = convertTokenToDecimal(amount1, token1.decimals.toI32())
