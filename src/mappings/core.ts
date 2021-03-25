@@ -235,9 +235,13 @@ export function handleMint(event: Mint): void {
   const amount1 = event.parameters[2].value.toBigInt()
   log.info("Finished", [])
   const transaction = Transaction.load(event.transaction.hash.toHexString())!
+  log.info("transaction", [])
   const mints = transaction.mints
+  log.info("mints", [])
   const mint = MintEvent.load(mints[mints.length - 1])!
+  log.info("mint", [])
   const pairId = event.address.toHex()
+  log.info("pairId", [])
   const pair = Pair.load(pairId)!
   const uniswap = UniswapFactory.load(FACTORY_ADDRESS_STRING)!
   const token0 = Token.load(pair.token0)!
