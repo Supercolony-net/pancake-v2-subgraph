@@ -66,7 +66,7 @@ export function handleTransfer(event: Transfer): void {
       const mint = new MintEvent(
           transactionHashId
           .concat('-')
-          .concat(mints.length.toString())
+          .concat(BigInt.fromI32(mints.length).toString())
       )
       mint.transaction = transactionHashId
       mint.pair = pairId
@@ -85,7 +85,7 @@ export function handleTransfer(event: Transfer): void {
     let burn = new BurnEvent(
         transactionHashId
         .concat('-')
-        .concat(burns.length.toString())
+        .concat(BigInt.fromI32(burns.length).toString())
     )
     burn.transaction = transactionHashId
     burn.pair = pairId
@@ -113,7 +113,7 @@ export function handleTransfer(event: Transfer): void {
         burn = new BurnEvent(
             transactionHashId
             .concat('-')
-            .concat(burns.length.toString())
+            .concat(BigInt.fromI32(burns.length).toString())
         )
         burn.transaction = transactionHashId
         burn.needsComplete = false
@@ -125,7 +125,7 @@ export function handleTransfer(event: Transfer): void {
       burn = new BurnEvent(
           transactionHashId
           .concat('-')
-          .concat(burns.length.toString())
+          .concat(BigInt.fromI32(burns.length).toString())
       )
       burn.transaction = transactionHashId
       burn.needsComplete = false
@@ -427,7 +427,7 @@ export function handleSwap(event: Swap): void {
   const swap = new SwapEvent(
       transactionHashId
       .concat('-')
-      .concat(swaps.length.toString())
+      .concat(BigInt.fromI32(swaps.length).toString())
   )
 
   // update swap event
