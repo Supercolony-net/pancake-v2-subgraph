@@ -37,7 +37,7 @@ export function handleTransfer(event: Transfer): void {
 
   // get pair and load contract
   const pairId = event.address.toHexString();
-  let pair = Pair.load(pairId)!
+  const pair = Pair.load(pairId)!
 
   // liquidity token amount being transferred
   const value = convertTokenToDecimal(event.params.value, 18)
@@ -81,7 +81,7 @@ export function handleTransfer(event: Transfer): void {
   }
 
   // case where direct send first on ETH withdrawls
-  if (event.params.to.equals(event.address)) {
+  if (to.equals(event.address)) {
     let burn = new BurnEvent(
         transactionHashId
         .concat('-')
@@ -100,7 +100,7 @@ export function handleTransfer(event: Transfer): void {
   }
 
   // burn
-  if (event.params.to.equals(ZERO_ADDRESS) && event.params.from.equals(event.address)) {
+  if (to.equals(ZERO_ADDRESS) && from.equals(event.address)) {
     pair.totalSupply = pair.totalSupply.minus(value)
 
     // this is a new instance of a logical burn
@@ -156,8 +156,10 @@ export function handleTransfer(event: Transfer): void {
     }
   }
 
-  transaction.save()
   pair.save()
+  transaction.mints = mints
+  transaction.burns = burns
+  transaction.save()
 }
 
 export function handleSync(event: Sync): void {
@@ -227,21 +229,13 @@ export function handleSync(event: Sync): void {
 }
 
 export function handleMint(event: Mint): void {
-  log.info("Try to get 0", [])
   const sender = event.parameters[0].value.toAddress()
-  log.info("Try to get 1", [])
   const amount0 = event.parameters[1].value.toBigInt()
-  log.info("Try to get 2", [])
   const amount1 = event.parameters[2].value.toBigInt()
-  log.info("Finished", [])
   const transaction = Transaction.load(event.transaction.hash.toHexString())!
-  log.info("transaction", [])
   const mints = transaction.mints
-  log.info("mints", [])
   const mint = MintEvent.load(mints[mints.length - 1])!
-  log.info("mint", [])
   const pairId = event.address.toHex()
-  log.info("pairId", [])
   const pair = Pair.load(pairId)!
   const uniswap = UniswapFactory.load(FACTORY_ADDRESS_STRING)!
   const token0 = Token.load(pair.token0)!
@@ -249,7 +243,6 @@ export function handleMint(event: Mint): void {
   const bundle = Bundle.load('1')!
   const ethPrice = bundle.ethPrice
 
-  log.info("Hello", [])
   // update exchange info (except balances, sync will cover that)
   const token0Amount = convertTokenToDecimal(amount0, token0.decimals.toI32())
   const token1Amount = convertTokenToDecimal(amount1, token1.decimals.toI32())
@@ -267,7 +260,6 @@ export function handleMint(event: Mint): void {
     .times(token1Amount)
     .plus(token0.derivedETH.times(token0Amount))
     .times(ethPrice)
-  log.info("Bye", [])
 
   mint.sender = sender
   mint.amount0 = token0Amount as BigDecimal
@@ -282,7 +274,6 @@ export function handleMint(event: Mint): void {
   const uniswapDayData = updateUniswapDayData(uniswap, timestamp)
   const token0DayData = updateTokenDayData(token0, ethPrice, timestamp)
   const token1DayData = updateTokenDayData(token1, ethPrice, timestamp)
-  log.info("Bomb", [])
 
   // save entities
   mint.save()
@@ -295,7 +286,6 @@ export function handleMint(event: Mint): void {
   pairDayData.save()
   token0DayData.save()
   token1DayData.save()
-  log.info("Save", [])
 }
 
 export function handleBurn(event: Burn): void {
@@ -503,6 +493,7 @@ export function handleSwap(event: Swap): void {
   uniswap.save()
   pair.save()
   swap.save()
+  transaction.swaps = swaps
   transaction.save()
   pairDayData.save()
   uniswapDayData.save()
