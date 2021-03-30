@@ -3,23 +3,18 @@ import { BigInt, BigDecimal, Address } from '@graphprotocol/graph-ts'
 import { ERC20 } from '../types/Factory/ERC20'
 import { ERC20SymbolBytes } from '../types/Factory/ERC20SymbolBytes'
 import { ERC20NameBytes } from '../types/Factory/ERC20NameBytes'
-import { Factory as FactoryContract } from '../types/templates/Pair/Factory'
 import { Token } from '../types/schema'
 
 export const ZERO_ADDRESS = Address.fromString('0x0000000000000000000000000000000000000000')
 export const FACTORY_ADDRESS_STRING = '0xBCfCcbde45cE874adCB698cC183deBcF17952812'
-export const FACTORY_ADDRESS = Address.fromString(FACTORY_ADDRESS_STRING)
 
 export let ZERO_BI = BigInt.fromI32(0)
 export let ONE_BI = BigInt.fromI32(1)
 export let ZERO_BD = BigDecimal.fromString('0')
-export let ONE_BD = BigDecimal.fromString('1')
 export let TEN_BD = BigDecimal.fromString('10')
 export let TEN_6_BD = BigDecimal.fromString('1000000')
 export let TEN_9_BD = BigDecimal.fromString('1000000000')
 export let TEN_18_BD = BigDecimal.fromString('1000000000000000000')
-
-export let factoryContract = FactoryContract.bind(FACTORY_ADDRESS)
 
 export function exponentToBigDecimal(decimals: i32): BigDecimal {
   if (decimals == 18) {
