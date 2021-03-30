@@ -60,13 +60,17 @@ export function handleTransfer(event: Transfer): void {
   log.info('Hello4', []);
   // mints
   const mints = transaction!.mintsValueArray
+  log.info('Hello44', []);
   const burns = transaction!.burnsValueArray
+  log.info('Hello444', []);
   if (from.equals(ZERO_ADDRESS)) {
     // update total supply
     pair.totalSupply = pair.totalSupply.plus(value)
 
+    log.info('Hello4444', []);
     // create new mint if no mints so far or if last one is done already
     if (mints.length === 0 || isCompleteMint(mints[mints.length - 1]!.toString())) {
+      log.info('Hello42131', []);
       const mint = new MintEvent(
           transactionHashId
           .concat('-')
@@ -84,6 +88,7 @@ export function handleTransfer(event: Transfer): void {
       mints.push(Value.fromString(mint.id));
     }
   }
+  log.info('Hello12312', []);
 
   // case where direct send first on ETH withdrawls
   if (to.equals(event.address)) {
