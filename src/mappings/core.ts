@@ -26,12 +26,14 @@ function isCompleteMint(mintId: string): boolean {
 }
 
 export function handleTransfer(event: Transfer): void {
+  log.info('Hello', []);
   // ignore initial transfers for first adds
   const to = event.params.to
   if (to.equals(ZERO_ADDRESS) && event.params.value.equals(BigInt.fromI32(1000))) {
     return
   }
 
+  log.info('Hello2', []);
   const from = event.params.from
   const transactionHashId = event.transaction.hash.toHexString()
 
@@ -44,6 +46,7 @@ export function handleTransfer(event: Transfer): void {
 
   // get or create transaction
   // TODO: Add optimization to not ask postgres
+  log.info('Hello3', []);
   let transaction = Transaction.load(transactionHashId)
   if (transaction === null) {
     transaction = new Transaction(transactionHashId)
@@ -54,6 +57,7 @@ export function handleTransfer(event: Transfer): void {
     transaction.swaps = []
   }
 
+  log.info('Hello4', []);
   // mints
   const mints = transaction!.mintsValueArray
   const burns = transaction!.burnsValueArray
@@ -75,6 +79,7 @@ export function handleTransfer(event: Transfer): void {
       mint.timestamp = transaction.timestamp
       mint.save()
 
+      log.info('Hello7', []);
       // update mints in transaction
       mints.push(Value.fromString(mint.id));
     }
@@ -96,6 +101,7 @@ export function handleTransfer(event: Transfer): void {
     burn.needsComplete = true
     burn.save()
 
+    log.info('Hello8', []);
     burns.push(Value.fromString(burn.id))
   }
 
@@ -156,6 +162,7 @@ export function handleTransfer(event: Transfer): void {
     }
   }
 
+  log.info('Hello5', []);
   pair.save()
   transaction.save()
 }
