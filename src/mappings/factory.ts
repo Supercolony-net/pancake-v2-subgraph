@@ -4,20 +4,16 @@ import { UniswapFactory, Pair, Token, Bundle } from '../types/schema'
 import { PairCreated } from '../types/Factory/Factory'
 import { Pair as PairTemplate } from '../types/templates'
 import {
-  FACTORY_ADDRESS,
   ZERO_BD,
   ZERO_BI,
-  fetchTokenSymbol,
-  fetchTokenName,
-  fetchTokenDecimals,
-  fetchTokenTotalSupply
+  fetchToken, FACTORY_ADDRESS_STRING
 } from './helpers'
 
 export function handleNewPair(event: PairCreated): void {
   // load factory (create if first exchange)
-  let factory = UniswapFactory.load(FACTORY_ADDRESS)
+  let factory = UniswapFactory.load(FACTORY_ADDRESS_STRING)
   if (factory === null) {
-    factory = new UniswapFactory(FACTORY_ADDRESS)
+    factory = new UniswapFactory(FACTORY_ADDRESS_STRING)
     factory.pairCount = 0
     factory.totalVolumeETH = ZERO_BD
     factory.totalLiquidityETH = ZERO_BD
@@ -27,31 +23,28 @@ export function handleNewPair(event: PairCreated): void {
     factory.txCount = ZERO_BI
 
     // create new bundle
-    let bundle = new Bundle('1')
+    const bundle = new Bundle('1')
     bundle.ethPrice = ZERO_BD
     bundle.save()
   }
   factory.pairCount = factory.pairCount + 1
-  factory.save()
 
+  const token0Id = event.params.token0.toHexString();
+  const token1Id = event.params.token1.toHexString();
   // create the tokens
-  let token0 = Token.load(event.params.token0.toHexString())
-  let token1 = Token.load(event.params.token1.toHexString())
+  let token0 = Token.load(token0Id)
+  let token1 = Token.load(token1Id)
 
   // fetch info if null
   if (token0 === null) {
-    token0 = new Token(event.params.token0.toHexString())
-    token0.symbol = fetchTokenSymbol(event.params.token0)
-    token0.name = fetchTokenName(event.params.token0)
-    token0.totalSupply = fetchTokenTotalSupply(event.params.token0)
-    let decimals = fetchTokenDecimals(event.params.token0)
+    token0 = fetchToken(token0Id, event.params.token0)
+
     // bail if we couldn't figure out the decimals
-    if (decimals === null) {
+    if (token0 === null) {
       log.debug('mybug the decimal on token 0 was null', [])
       return
     }
 
-    token0.decimals = decimals
     token0.derivedETH = ZERO_BD
     token0.tradeVolume = ZERO_BD
     token0.tradeVolumeUSD = ZERO_BD
@@ -63,17 +56,12 @@ export function handleNewPair(event: PairCreated): void {
 
   // fetch info if null
   if (token1 === null) {
-    token1 = new Token(event.params.token1.toHexString())
-    token1.symbol = fetchTokenSymbol(event.params.token1)
-    token1.name = fetchTokenName(event.params.token1)
-    token1.totalSupply = fetchTokenTotalSupply(event.params.token1)
-    let decimals = fetchTokenDecimals(event.params.token1)
+    token1 = fetchToken(token1Id, event.params.token1)
 
     // bail if we couldn't figure out the decimals
-    if (decimals === null) {
+    if (token1 === null) {
       return
     }
-    token1.decimals = decimals
     token1.derivedETH = ZERO_BD
     token1.tradeVolume = ZERO_BD
     token1.tradeVolumeUSD = ZERO_BD
@@ -83,9 +71,9 @@ export function handleNewPair(event: PairCreated): void {
     token1.txCount = ZERO_BI
   }
 
-  let pair = new Pair(event.params.pair.toHexString()) as Pair
-  pair.token0 = token0.id
-  pair.token1 = token1.id
+  const pair = new Pair(event.params.pair.toHexString()) as Pair
+  pair.token0 = token0Id
+  pair.token1 = token1Id
   pair.createdAtTimestamp = event.block.timestamp
   pair.createdAtBlockNumber = event.block.number
   pair.txCount = ZERO_BI

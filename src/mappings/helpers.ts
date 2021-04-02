@@ -4,57 +4,65 @@ import { ERC20 } from '../types/Factory/ERC20'
 import { ERC20SymbolBytes } from '../types/Factory/ERC20SymbolBytes'
 import { ERC20NameBytes } from '../types/Factory/ERC20NameBytes'
 import { Factory as FactoryContract } from '../types/templates/Pair/Factory'
+import { Token } from '../types/schema'
 
-export const ADDRESS_ZERO = '0x0000000000000000000000000000000000000000'
-export const FACTORY_ADDRESS = '0xBCfCcbde45cE874adCB698cC183deBcF17952812'
+export const ZERO_ADDRESS = Address.fromString('0x0000000000000000000000000000000000000000')
+export const FACTORY_ADDRESS_STRING = '0xBCfCcbde45cE874adCB698cC183deBcF17952812'
+export const FACTORY_ADDRESS = Address.fromString(FACTORY_ADDRESS_STRING)
 
 export let ZERO_BI = BigInt.fromI32(0)
 export let ONE_BI = BigInt.fromI32(1)
 export let ZERO_BD = BigDecimal.fromString('0')
 export let ONE_BD = BigDecimal.fromString('1')
-export let BI_18 = BigInt.fromI32(18)
+export let TEN_BD = BigDecimal.fromString('10')
+export let TEN_6_BD = BigDecimal.fromString('1000000')
+export let TEN_9_BD = BigDecimal.fromString('1000000000')
+export let TEN_18_BD = BigDecimal.fromString('1000000000000000000')
 
-export let factoryContract = FactoryContract.bind(Address.fromString(FACTORY_ADDRESS))
+export let factoryContract = FactoryContract.bind(FACTORY_ADDRESS)
 
-export function exponentToBigDecimal(decimals: BigInt): BigDecimal {
-  let bd = BigDecimal.fromString('1')
-  for (let i = ZERO_BI; i.lt(decimals as BigInt); i = i.plus(ONE_BI)) {
-    bd = bd.times(BigDecimal.fromString('10'))
+export function exponentToBigDecimal(decimals: i32): BigDecimal {
+  if (decimals == 18) {
+    return TEN_18_BD;
+  } else if (decimals == 9) {
+    return TEN_9_BD;
+  } else if (decimals == 6) {
+    return TEN_6_BD;
   }
-  return bd
+  let result = BigDecimal.fromString('1')
+  for (let i = 0; i < decimals; ++i) {
+    result = result.times(TEN_BD)
+  }
+  return result
 }
 
-export function bigDecimalExp18(): BigDecimal {
-  return BigDecimal.fromString('1000000000000000000')
-}
-
-export function convertEthToDecimal(eth: BigInt): BigDecimal {
-  return eth.toBigDecimal().div(exponentToBigDecimal(18))
-}
-
-export function convertTokenToDecimal(tokenAmount: BigInt, exchangeDecimals: BigInt): BigDecimal {
-  if (exchangeDecimals == ZERO_BI) {
+export function convertTokenToDecimal(tokenAmount: BigInt, exchangeDecimals: i32): BigDecimal {
+  if (exchangeDecimals == 0) {
     return tokenAmount.toBigDecimal()
   }
   return tokenAmount.toBigDecimal().div(exponentToBigDecimal(exchangeDecimals))
-}
-
-export function equalToZero(value: BigDecimal): boolean {
-  const formattedVal = parseFloat(value.toString())
-  const zero = parseFloat(ZERO_BD.toString())
-  if (zero == formattedVal) {
-    return true
-  }
-  return false
 }
 
 export function isNullEthValue(value: string): boolean {
   return value == '0x0000000000000000000000000000000000000000000000000000000000000001'
 }
 
-export function fetchTokenSymbol(tokenAddress: Address): string {
-  let contract = ERC20.bind(tokenAddress)
-  let contractSymbolBytes = ERC20SymbolBytes.bind(tokenAddress)
+export function fetchToken(id: string, address: Address): Token | null {
+  const result = new Token(id)
+  const contract = ERC20.bind(address)
+  const contractNameBytes = ERC20NameBytes.bind(address)
+  const contractSymbolBytes = ERC20SymbolBytes.bind(address)
+
+  // try types uint8 for decimals
+  let decimalValue = null
+  let decimalResult = contract.try_decimals()
+  if (!decimalResult.reverted) {
+    decimalValue = decimalResult.value
+  }
+  if (decimalValue == null) {
+    return null
+  }
+  result.decimals = BigInt.fromI32(decimalValue as i32);
 
   // try types string and bytes32 for symbol
   let symbolValue = 'unknown'
@@ -70,13 +78,7 @@ export function fetchTokenSymbol(tokenAddress: Address): string {
   } else {
     symbolValue = symbolResult.value
   }
-
-  return symbolValue
-}
-
-export function fetchTokenName(tokenAddress: Address): string {
-  let contract = ERC20.bind(tokenAddress)
-  let contractNameBytes = ERC20NameBytes.bind(tokenAddress)
+  result.symbol = symbolValue;
 
   // try types string and bytes32 for name
   let nameValue = 'unknown'
@@ -92,27 +94,14 @@ export function fetchTokenName(tokenAddress: Address): string {
   } else {
     nameValue = nameResult.value
   }
+  result.name = nameValue;
 
-  return nameValue
-}
-
-export function fetchTokenTotalSupply(tokenAddress: Address): BigInt {
-  let contract = ERC20.bind(tokenAddress)
-  let totalSupplyValue = null
   let totalSupplyResult = contract.try_totalSupply()
   if (!totalSupplyResult.reverted) {
-    totalSupplyValue = totalSupplyResult as i32
+    result.totalSupply = totalSupplyResult.value;
+  } else {
+    result.totalSupply = ZERO_BI;
   }
-  return BigInt.fromI32(totalSupplyValue as i32)
-}
 
-export function fetchTokenDecimals(tokenAddress: Address): BigInt {
-  let contract = ERC20.bind(tokenAddress)
-  // try types uint8 for decimals
-  let decimalValue = null
-  let decimalResult = contract.try_decimals()
-  if (!decimalResult.reverted) {
-    decimalValue = decimalResult.value
-  }
-  return BigInt.fromI32(decimalValue as i32)
+  return result;
 }
