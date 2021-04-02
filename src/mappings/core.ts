@@ -1,5 +1,5 @@
 /* eslint-disable prefer-const */
-import { BigInt, BigDecimal, store, log } from '@graphprotocol/graph-ts'
+import { BigInt, BigDecimal, store, log, Value } from '@graphprotocol/graph-ts'
 import {
   Pair,
   Token,
@@ -55,14 +55,14 @@ export function handleTransfer(event: Transfer): void {
   }
 
   // mints
-  const mints = transaction!.mints
-  const burns = transaction!.burns
+  const mints = transaction!.mintsValueArray
+  const burns = transaction!.burnsValueArray
   if (from.equals(ZERO_ADDRESS)) {
     // update total supply
     pair.totalSupply = pair.totalSupply.plus(value)
 
     // create new mint if no mints so far or if last one is done already
-    if (mints.length === 0 || isCompleteMint(mints[mints.length - 1]!)) {
+    if (mints.length === 0 || isCompleteMint(mints[mints.length - 1]!.toString())) {
       const mint = new MintEvent(
           transactionHashId
           .concat('-')
@@ -76,7 +76,7 @@ export function handleTransfer(event: Transfer): void {
       mint.save()
 
       // update mints in transaction
-      mints.push(mint.id);
+      mints.push(Value.fromString(mint.id));
     }
   }
 
@@ -96,7 +96,7 @@ export function handleTransfer(event: Transfer): void {
     burn.needsComplete = true
     burn.save()
 
-    burns.push(burn.id)
+    burns.push(Value.fromString(burn.id))
   }
 
   // burn
@@ -106,7 +106,7 @@ export function handleTransfer(event: Transfer): void {
     // this is a new instance of a logical burn
     let burn: BurnEvent
     if (burns.length > 0) {
-      let currentBurn = BurnEvent.load(burns[burns.length - 1])!
+      let currentBurn = BurnEvent.load(burns[burns.length - 1].toString())!
       if (currentBurn.needsComplete) {
         burn = currentBurn as BurnEvent
       } else {
@@ -135,12 +135,12 @@ export function handleTransfer(event: Transfer): void {
     }
 
     // if this logical burn included a fee mint, account for this
-    if (mints.length !== 0 && !isCompleteMint(mints[mints.length - 1])) {
-      const mint = MintEvent.load(mints[mints.length - 1])!
+    if (mints.length !== 0 && !isCompleteMint(mints[mints.length - 1].toString())) {
+      const mint = MintEvent.load(mints[mints.length - 1].toString())!
       burn.feeTo = mint.to
       burn.feeLiquidity = mint.liquidity
       // remove the logical mint
-      store.remove('Mint', mints[mints.length - 1])
+      store.remove('Mint', mints[mints.length - 1].toString())
       // update the transaction
 
       mints.pop()
@@ -148,17 +148,15 @@ export function handleTransfer(event: Transfer): void {
     burn.save()
     // if accessing last one, replace it
     if (burn.needsComplete) {
-      burns[burns.length - 1] = burn.id
+      burns[burns.length - 1] = Value.fromString(burn.id)
     }
     // else add new one
     else {
-      burns.push(burn.id)
+      burns.push(Value.fromString(burn.id))
     }
   }
 
   pair.save()
-  transaction.mints = mints
-  transaction.burns = burns
   transaction.save()
 }
 
@@ -233,8 +231,8 @@ export function handleMint(event: Mint): void {
   const amount0 = event.parameters[1].value.toBigInt()
   const amount1 = event.parameters[2].value.toBigInt()
   const transaction = Transaction.load(event.transaction.hash.toHexString())!
-  const mints = transaction.mints
-  const mint = MintEvent.load(mints[mints.length - 1])!
+  const mints = transaction.mintsValueArray
+  const mint = MintEvent.load(mints[mints.length - 1].toString())!
   const pairId = event.address.toHex()
   const pair = Pair.load(pairId)!
   const uniswap = UniswapFactory.load(FACTORY_ADDRESS_STRING)!
@@ -296,8 +294,8 @@ export function handleBurn(event: Burn): void {
     return
   }
 
-  const burns = transaction.burns
-  const burn = BurnEvent.load(burns[burns.length - 1])!
+  const burns = transaction.burnsValueArray
+  const burn = BurnEvent.load(burns[burns.length - 1].toString())!
   const pairId = event.address.toHex()
   const pair = Pair.load(pairId)!
   const uniswap = UniswapFactory.load(FACTORY_ADDRESS_STRING)!
@@ -428,7 +426,7 @@ export function handleSwap(event: Swap): void {
     transaction.swaps = []
     transaction.burns = []
   }
-  const swaps = transaction.swaps
+  const swaps = transaction.swapsValueArray
   const swap = new SwapEvent(
       transactionHashId
       .concat('-')
@@ -449,7 +447,7 @@ export function handleSwap(event: Swap): void {
   swap.logIndex = event.logIndex
   // use the tracked amount if we have it
   swap.amountUSD = trackedAmountUSD === ZERO_BD ? derivedAmountUSD : trackedAmountUSD
-  swaps.push(swap.id)
+  swaps.push(Value.fromString(swap.id))
 
   // update day entities
   const timestamp = event.block.timestamp.toI32()
@@ -493,7 +491,6 @@ export function handleSwap(event: Swap): void {
   uniswap.save()
   pair.save()
   swap.save()
-  transaction.swaps = swaps
   transaction.save()
   pairDayData.save()
   uniswapDayData.save()
