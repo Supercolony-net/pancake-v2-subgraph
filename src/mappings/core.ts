@@ -363,7 +363,7 @@ export function handleSwap(event: Swap): void {
   const usdOut = amount0Out.times(token0ETH).plus(amount1Out.times(token1ETH)).times(ethPrice);
   let user = getUser(event.transaction.from)!;
   user.feesUsdPaid = user.feesUsdPaid.plus(usdIn.minus(usdOut));
-  user.usdSwapped = user.usdSwapped.plus(usdIn);
+  user.usdSwapped = user.usdSwapped.plus(usdIn).plus(usdOut);
 
   // get total amounts of derived USD and ETH for tracking
   const derivedAmountETH = token1ETH
