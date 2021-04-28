@@ -3,12 +3,10 @@ import { BigInt, BigDecimal, Address } from '@graphprotocol/graph-ts'
 import { ERC20 } from '../types/Factory/ERC20'
 import { ERC20SymbolBytes } from '../types/Factory/ERC20SymbolBytes'
 import { ERC20NameBytes } from '../types/Factory/ERC20NameBytes'
-import { Token } from '../types/schema'
+import { Bundle, Pair, Token, User, LiquidityPosition } from '../types/schema'
 
 export const ZERO_ADDRESS = Address.fromString('0x0000000000000000000000000000000000000000')
-export const FACTORY_ADDRESS_STRING = '0xBCfCcbde45cE874adCB698cC183deBcF17952812'
 
-export let ZERO_BI = BigInt.fromI32(0)
 export let ONE_BI = BigInt.fromI32(1)
 export let ZERO_BD = BigDecimal.fromString('0')
 export let TEN_BD = BigDecimal.fromString('10')
@@ -91,12 +89,42 @@ export function fetchToken(id: string, address: Address): Token | null {
   }
   result.name = nameValue;
 
-  let totalSupplyResult = contract.try_totalSupply()
-  if (!totalSupplyResult.reverted) {
-    result.totalSupply = totalSupplyResult.value;
-  } else {
-    result.totalSupply = ZERO_BI;
+  return result;
+}
+
+export function getUser(address: Address): User | null {
+  let userId = address.toHexString();
+  if (address.equals(ZERO_ADDRESS) || Pair.load(userId) != null)
+    return null;
+
+  let user = User.load(userId)
+  if (user === null) {
+    user = new User(userId)
+    user.balance = ZERO_BD
+    user.usdSwapped = ZERO_BD
+    user.feesUsdPaid = ZERO_BD
+    user.lpTransfers = []
+    user.liquidityPositions = []
+    user.transactions = []
   }
 
-  return result;
+  return user;
+}
+
+export function createLiquiditySnapshot(pair: Pair, timestamp: BigInt, blockNumber: BigInt): LiquidityPosition {
+  let bundle = Bundle.load('1')
+  let token0 = Token.load(pair.token0)
+  let token1 = Token.load(pair.token1)
+
+  // create new snapshot
+  let snapshot = new LiquidityPosition("")
+  snapshot.timestamp = timestamp
+  snapshot.blockNumber = blockNumber
+  snapshot.token0PriceUSD = token0.derivedETH.times(bundle.ethPrice)
+  snapshot.token1PriceUSD = token1.derivedETH.times(bundle.ethPrice)
+  snapshot.reserve0 = pair.reserve0
+  snapshot.reserve1 = pair.reserve1
+  snapshot.reserveUSD = pair.reserveUSD
+  snapshot.liquidityTokenTotalSupply = pair.totalSupply
+  return snapshot
 }
