@@ -12,6 +12,7 @@ type Token @entity {
 
   # derived prices
   derivedETH: BigDecimal!
+  previousDerivedETH: BigDecimal!
 }
 
 type Pair @entity {
@@ -43,12 +44,12 @@ type User @entity {
   usdSwapped: BigDecimal!
   # Paid fees for all swaps
   feesUsdPaid: BigDecimal!
-  # The list of all transfers from/to User to/from not Zero Address or Pair Address.
-  lpTransfers: [TransferPosition!]!
-  liquidityPositions: [LiquidityPosition!]!
-  transactions: [Transaction!]!
+  lpTransfersCount: BigInt!
+  liquidityPositionsCount: BigInt!
+  transactionsCount: BigInt!
 }
 
+# The list of all transfers from/to User to/from not Zero Address or Pair Address.
 type TransferPosition @entity {
   id: ID!
   transaction: Transaction!
@@ -79,6 +80,7 @@ type Transaction @entity {
   id: ID! # txn hash
   blockNumber: BigInt!
   timestamp: BigInt!
+  touchedUsers: [User!]!
   # This is not the reverse of Mint.transaction; it is only used to
   # track incomplete mints (similar for burns and swaps)
   mints: [Mint!]!

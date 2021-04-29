@@ -8,7 +8,8 @@ import {
   Burn as BurnEvent,
   Swap as SwapEvent,
   Bundle,
-  TransferPosition
+  TransferPosition,
+  User
 } from '../types/schema'
 import { Mint, Burn, Swap, Transfer, Sync } from '../types/templates/Pair/Pair'
 import { getEthPriceInUSD, findEthPerToken, getTrackedVolumeUSD, getTrackedLiquidityUSD } from './pricing'
@@ -18,7 +19,8 @@ import {
   ONE_BI,
   ZERO_BD,
   getUser,
-  createLiquiditySnapshot
+  createLiquiditySnapshot,
+  touchUser
 } from './helpers'
 
 function isCompleteMint(mintId: string): boolean {
@@ -162,26 +164,30 @@ export function handleTransfer(event: Transfer): void {
 
   if (toUser != null) {
     toUser.balance = toUser.balance.plus(value);
-    toUser.transactionsValueArray.push(Value.fromString(transactionHashId));
+    if (touchUser(transaction as Transaction, toUser as User)) {
+      toUser.transactionsCount = toUser.transactionsCount.plus(ONE_BI);
+    }
     lpPosition.user = toUser.id;
     lpPosition.liquidityTokenBalance = toUser.balance;
-    lpPosition.id = toUser.id.concat(BigInt.fromI32(toUser.liquidityPositionsValueArray.length).toString());
+    lpPosition.id = toUser.id.concat(toUser.liquidityPositionsCount.toString());
     lpPosition.save();
-    toUser.liquidityPositionsValueArray.push(Value.fromString(lpPosition.id));
+    toUser.liquidityPositionsCount = toUser.liquidityPositionsCount.plus(ONE_BI);
   }
 
   if (fromUser != null) {
     fromUser.balance = fromUser.balance.minus(value);
-    fromUser.transactionsValueArray.push(Value.fromString(transactionHashId));
+    if (touchUser(transaction as Transaction, fromUser as User)) {
+      fromUser.transactionsCount = fromUser.transactionsCount.plus(ONE_BI);
+    }
     lpPosition.user = fromUser.id;
     lpPosition.liquidityTokenBalance = fromUser.balance;
-    lpPosition.id = fromUser.id.concat(BigInt.fromI32(fromUser.liquidityPositionsValueArray.length).toString());
+    lpPosition.id = fromUser.id.concat(fromUser.liquidityPositionsCount.toString());
     lpPosition.save();
-    fromUser.liquidityPositionsValueArray.push(Value.fromString(lpPosition.id));
+    fromUser.liquidityPositionsCount = fromUser.liquidityPositionsCount.plus(ONE_BI);
   }
 
   if (toUser != null && fromUser != null) {
-    let transfer = new TransferPosition(fromUser.id.concat(toUser.id).concat(BigInt.fromI32(fromUser.lpTransfersValueArray.length).toString()));
+    let transfer = new TransferPosition(fromUser.id.concat(toUser.id).concat(fromUser.lpTransfersCount.toString()));
     transfer.transaction = transactionHashId;
     transfer.timestamp = event.block.timestamp;
     transfer.blockNumber = event.block.number;
@@ -191,8 +197,8 @@ export function handleTransfer(event: Transfer): void {
     transfer.derivedUsdAmount = pair.reserveUSD.times(value).div(pair.totalSupply);
     transfer.pair = pairId;
     transfer.save();
-    toUser.lpTransfersValueArray.push(Value.fromString(transfer.id));
-    fromUser.lpTransfersValueArray.push(Value.fromString(transfer.id));
+    toUser.lpTransfersCount = toUser.lpTransfersCount.plus(ONE_BI);
+    fromUser.lpTransfersCount = fromUser.lpTransfersCount.plus(ONE_BI);
   }
 
   if (toUser != null) {
@@ -233,8 +239,10 @@ export function handleSync(event: Sync): void {
   bundle.ethPrice = ethPrice
 
   const token0ETH = findEthPerToken(token0 as Token)
+  token0.previousDerivedETH = token0.derivedETH
   token0.derivedETH = token0ETH
   const token1ETH = findEthPerToken(token1 as Token)
+  token1.previousDerivedETH = token1.derivedETH
   token1.derivedETH = token1ETH
 
   // get tracked liquidity - will be 0 if neither is in whitelist
@@ -361,11 +369,12 @@ export function handleSwap(event: Swap): void {
   const token0ETH = token0.derivedETH;
   const token1ETH = token1.derivedETH;
 
-  const usdIn = amount0In.times(token0ETH).plus(amount1In.times(token1ETH)).times(ethPrice);
+  const usdInOld = amount0In.times(token0.previousDerivedETH).plus(amount1In.times(token1.previousDerivedETH)).times(ethPrice);
+  const usdInNew = amount0In.times(token0ETH).plus(amount1In.times(token1ETH)).times(ethPrice);
   const usdOut = amount0Out.times(token0ETH).plus(amount1Out.times(token1ETH)).times(ethPrice);
   let user = getUser(event.transaction.from, pairId)!;
-  user.feesUsdPaid = user.feesUsdPaid.plus(usdIn.minus(usdOut));
-  user.usdSwapped = user.usdSwapped.plus(usdIn).plus(usdOut);
+  user.feesUsdPaid = user.feesUsdPaid.plus(usdInOld.minus(usdOut));
+  user.usdSwapped = user.usdSwapped.plus(usdInNew).plus(usdOut);
 
   // get total amounts of derived USD and ETH for tracking
   const derivedAmountETH = token1ETH
@@ -385,6 +394,8 @@ export function handleSwap(event: Swap): void {
     transaction.mints = []
     transaction.swaps = []
     transaction.burns = []
+    touchUser(transaction as Transaction, user as User)
+    user.transactionsCount = user.transactionsCount.plus(ONE_BI)
   }
   const swaps = transaction.swapsValueArray
   const swap = new SwapEvent(

@@ -1,12 +1,13 @@
 /* eslint-disable prefer-const */
-import { BigInt, BigDecimal, Address } from '@graphprotocol/graph-ts'
+import { BigInt, BigDecimal, Address, Value } from '@graphprotocol/graph-ts'
 import { ERC20 } from '../types/Factory/ERC20'
 import { ERC20SymbolBytes } from '../types/Factory/ERC20SymbolBytes'
 import { ERC20NameBytes } from '../types/Factory/ERC20NameBytes'
-import { Bundle, Pair, Token, User, LiquidityPosition } from '../types/schema'
+import { Bundle, Pair, Token, User, LiquidityPosition, Transaction } from '../types/schema'
 
 export const ZERO_ADDRESS = Address.fromString('0x0000000000000000000000000000000000000000')
 
+export let ZERO_BI = BigInt.fromI32(0)
 export let ONE_BI = BigInt.fromI32(1)
 export let ZERO_BD = BigDecimal.fromString('0')
 export let TEN_BD = BigDecimal.fromString('10')
@@ -103,9 +104,9 @@ export function getUser(address: Address, pairId: string): User | null {
     user.balance = ZERO_BD
     user.usdSwapped = ZERO_BD
     user.feesUsdPaid = ZERO_BD
-    user.lpTransfers = []
-    user.liquidityPositions = []
-    user.transactions = []
+    user.lpTransfersCount = ZERO_BI
+    user.liquidityPositionsCount = ZERO_BI
+    user.transactionsCount = ZERO_BI
   }
 
   return user;
@@ -127,4 +128,15 @@ export function createLiquiditySnapshot(pair: Pair, timestamp: BigInt, blockNumb
   snapshot.reserveUSD = pair.reserveUSD
   snapshot.liquidityTokenTotalSupply = pair.totalSupply
   return snapshot
+}
+
+export function touchUser(transaction: Transaction, user: User): boolean {
+  const users = transaction.touchedUsersValueArray;
+  for (let i = 0; i < users.length; ++i) {
+    if (users[i].toString() == user.id) {
+      return false;
+    }
+  }
+  users.push(Value.fromString(user.id));
+  return true;
 }
