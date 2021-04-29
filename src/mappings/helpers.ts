@@ -92,9 +92,9 @@ export function fetchToken(id: string, address: Address): Token | null {
   return result;
 }
 
-export function getUser(address: Address): User | null {
+export function getUser(address: Address, pairId: string): User | null {
   let userId = address.toHexString();
-  if (address.equals(ZERO_ADDRESS) || Pair.load(userId) != null)
+  if (address.equals(ZERO_ADDRESS) || userId == pairId)
     return null;
 
   let user = User.load(userId)
@@ -112,16 +112,13 @@ export function getUser(address: Address): User | null {
 }
 
 export function createLiquiditySnapshot(pair: Pair, timestamp: BigInt, blockNumber: BigInt): LiquidityPosition {
-  let bundle = Bundle.load('1')
-  let token0 = Token.load(pair.token0)
-  let token1 = Token.load(pair.token1)
-
   // create new snapshot
   let snapshot = new LiquidityPosition("")
   snapshot.timestamp = timestamp
   snapshot.blockNumber = blockNumber
-  snapshot.token0PriceUSD = token0.derivedETH.times(bundle.ethPrice)
-  snapshot.token1PriceUSD = token1.derivedETH.times(bundle.ethPrice)
+  const totalReserve = pair.reserve0.plus(pair.reserve1)
+  snapshot.token0PriceUSD = pair.reserveUSD.times(pair.reserve0).div(totalReserve).div(pair.reserve0);
+  snapshot.token1PriceUSD = pair.reserveUSD.times(pair.reserve1).div(totalReserve).div(pair.reserve1);
   snapshot.reserve0 = pair.reserve0
   snapshot.reserve1 = pair.reserve1
   snapshot.reserveUSD = pair.reserveUSD

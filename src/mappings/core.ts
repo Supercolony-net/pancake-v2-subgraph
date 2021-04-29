@@ -156,8 +156,8 @@ export function handleTransfer(event: Transfer): void {
     }
   }
 
-  const toUser = getUser(to);
-  const fromUser = getUser(from);
+  const toUser = getUser(to, pairId);
+  const fromUser = getUser(from, pairId);
   const lpPosition = createLiquiditySnapshot(pair, event.block.timestamp, event.block.number);
 
   if (toUser != null) {
@@ -165,7 +165,7 @@ export function handleTransfer(event: Transfer): void {
     toUser.transactionsValueArray.push(Value.fromString(transactionHashId));
     lpPosition.user = toUser.id;
     lpPosition.liquidityTokenBalance = toUser.balance;
-    lpPosition.id = pairId.concat(toUser.id).concat(BigInt.fromI32(toUser.liquidityPositionsValueArray.length).toString());
+    lpPosition.id = toUser.id.concat(BigInt.fromI32(toUser.liquidityPositionsValueArray.length).toString());
     lpPosition.save();
   }
 
@@ -174,7 +174,7 @@ export function handleTransfer(event: Transfer): void {
     fromUser.transactionsValueArray.push(Value.fromString(transactionHashId));
     lpPosition.user = fromUser.id;
     lpPosition.liquidityTokenBalance = fromUser.balance;
-    lpPosition.id = pairId.concat(fromUser.id).concat(BigInt.fromI32(fromUser.liquidityPositionsValueArray.length).toString());
+    lpPosition.id = fromUser.id.concat(BigInt.fromI32(fromUser.liquidityPositionsValueArray.length).toString());
     lpPosition.save();
   }
 
@@ -361,7 +361,7 @@ export function handleSwap(event: Swap): void {
 
   const usdIn = amount0In.times(token0ETH).plus(amount1In.times(token1ETH)).times(ethPrice);
   const usdOut = amount0Out.times(token0ETH).plus(amount1Out.times(token1ETH)).times(ethPrice);
-  let user = getUser(event.transaction.from)!;
+  let user = getUser(event.transaction.from, pairId)!;
   user.feesUsdPaid = user.feesUsdPaid.plus(usdIn.minus(usdOut));
   user.usdSwapped = user.usdSwapped.plus(usdIn).plus(usdOut);
 
