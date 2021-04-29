@@ -54,6 +54,7 @@ export function handleTransfer(event: Transfer): void {
     transaction.mints = []
     transaction.burns = []
     transaction.swaps = []
+    transaction.touchedUsers = []
   }
 
   // mints
@@ -394,6 +395,7 @@ export function handleSwap(event: Swap): void {
     transaction.mints = []
     transaction.swaps = []
     transaction.burns = []
+    transaction.touchedUsers = []
     touchUser(transaction as Transaction, user as User)
     user.transactionsCount = user.transactionsCount.plus(ONE_BI)
   }
