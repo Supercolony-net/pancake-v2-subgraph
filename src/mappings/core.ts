@@ -167,6 +167,7 @@ export function handleTransfer(event: Transfer): void {
     lpPosition.liquidityTokenBalance = toUser.balance;
     lpPosition.id = toUser.id.concat(BigInt.fromI32(toUser.liquidityPositionsValueArray.length).toString());
     lpPosition.save();
+    toUser.liquidityPositionsValueArray.push(Value.fromString(lpPosition.id));
   }
 
   if (fromUser != null) {
@@ -176,6 +177,7 @@ export function handleTransfer(event: Transfer): void {
     lpPosition.liquidityTokenBalance = fromUser.balance;
     lpPosition.id = fromUser.id.concat(BigInt.fromI32(fromUser.liquidityPositionsValueArray.length).toString());
     lpPosition.save();
+    fromUser.liquidityPositionsValueArray.push(Value.fromString(lpPosition.id));
   }
 
   if (toUser != null && fromUser != null) {
