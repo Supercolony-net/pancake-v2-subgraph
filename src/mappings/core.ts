@@ -195,7 +195,11 @@ export function handleTransfer(event: Transfer): void {
     transfer.from = fromUser.id;
     transfer.to = toUser.id;
     transfer.lpAmount = value;
-    transfer.derivedUsdAmount = pair.reserveUSD.times(value).div(pair.totalSupply);
+    if (pair.totalSupply.notEqual(ZERO_BD)) {
+      transfer.derivedUsdAmount = pair.reserveUSD.times(value).div(pair.totalSupply);
+    } else {
+      transfer.derivedUsdAmount = pair.reserveUSD.times(value);
+    }
     transfer.pair = pairId;
     transfer.save();
     toUser.lpTransfersCount = toUser.lpTransfersCount.plus(ONE_BI);
