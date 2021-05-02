@@ -12,7 +12,6 @@ type Token @entity {
 
   # derived prices
   derivedETH: BigDecimal!
-  previousDerivedETH: BigDecimal!
 }
 
 type Pair @entity {

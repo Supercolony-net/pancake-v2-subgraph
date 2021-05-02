@@ -244,10 +244,8 @@ export function handleSync(event: Sync): void {
   bundle.ethPrice = ethPrice
 
   const token0ETH = findEthPerToken(token0 as Token)
-  token0.previousDerivedETH = token0.derivedETH
   token0.derivedETH = token0ETH
   const token1ETH = findEthPerToken(token1 as Token)
-  token1.previousDerivedETH = token1.derivedETH
   token1.derivedETH = token1ETH
 
   // get tracked liquidity - will be 0 if neither is in whitelist
@@ -374,12 +372,13 @@ export function handleSwap(event: Swap): void {
   const token0ETH = token0.derivedETH;
   const token1ETH = token1.derivedETH;
 
-  const usdInOld = amount0In.times(token0.previousDerivedETH).plus(amount1In.times(token1.previousDerivedETH)).times(ethPrice);
-  const usdInNew = amount0In.times(token0ETH).plus(amount1In.times(token1ETH)).times(ethPrice);
+  // 1/400 = 0.25 - fee
+  const denominator = BigDecimal.fromString("400");
+  const isdIn = amount0In.times(token0ETH).plus(amount1In.times(token1ETH)).times(ethPrice);
   const usdOut = amount0Out.times(token0ETH).plus(amount1Out.times(token1ETH)).times(ethPrice);
   let user = getUser(event.transaction.from, pairId)!;
-  user.feesUsdPaid = user.feesUsdPaid.plus(usdInOld.minus(usdOut));
-  user.usdSwapped = user.usdSwapped.plus(usdInNew).plus(usdOut);
+  user.feesUsdPaid = user.feesUsdPaid.plus(isdIn.div(denominator));
+  user.usdSwapped = user.usdSwapped.plus(isdIn).plus(usdOut);
 
   // get total amounts of derived USD and ETH for tracking
   const derivedAmountETH = token1ETH

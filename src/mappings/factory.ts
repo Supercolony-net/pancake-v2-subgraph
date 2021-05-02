@@ -33,7 +33,6 @@ export function handleNewPair(event: PairCreated): void {
     }
 
     token0.derivedETH = ZERO_BD
-    token0.previousDerivedETH = ZERO_BD
     token0.totalLiquidity = ZERO_BD
   }
 
@@ -46,7 +45,6 @@ export function handleNewPair(event: PairCreated): void {
       return
     }
     token1.derivedETH = ZERO_BD
-    token1.previousDerivedETH = ZERO_BD
     token1.totalLiquidity = ZERO_BD
   }
 
