@@ -4,8 +4,8 @@ import { BigDecimal } from '@graphprotocol/graph-ts/index'
 import { ZERO_BD } from './helpers'
 
 const WBNB_ADDRESS = '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c'
-const BUSD_WBNB_PAIR = '0x1b96b92314c44b159149f7e0303511fb2fc4774f' // created block 589414
-const USDT_WBNB_PAIR = '0x20bcc3b8a0091ddac2d0bc30f68e6cbb97de59cd' // created block 648115
+const USDT_WBNB_PAIR = '0x16b9a82891338f9ba80e2d6970fdda79d1eb0dae' // created block 6810780
+const BUSD_WBNB_PAIR = '0x58f876857a02d6762e0101bb5c46a8c1ed44dc16' // created block 6810708
 
 export function getEthPriceInUSD(pair: Pair): BigDecimal {
   // fetch eth prices for each stablecoin
@@ -29,8 +29,16 @@ export function getEthPriceInUSD(pair: Pair): BigDecimal {
     const busdtReserve = busdPair.reserve0;
     const usdtReserve = usdtPair.reserve1;
     let totalLiquidityBNB = busdtReserve.plus(usdtReserve)
-    let busdWeight = busdtReserve.div(totalLiquidityBNB)
-    let usdtWeight = usdtReserve.div(totalLiquidityBNB)
+    
+    let busdWeight : BigDecimal;
+    let usdtWeight : BigDecimal;
+    
+    if (totalLiquidityBNB.notEqual(ZERO_BD)) {
+      busdWeight = busdtReserve.div(totalLiquidityBNB)
+      usdtWeight = usdtReserve.div(totalLiquidityBNB)
+    } else {
+      return ZERO_BD;
+    }
     return busdPair.token1Price.times(busdWeight).plus(usdtPair.token0Price.times(usdtWeight))
     // usdt is the only pair so far
   } else if (busdPair !== null) {

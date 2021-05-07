@@ -6,7 +6,7 @@ import { ERC20NameBytes } from '../types/Factory/ERC20NameBytes'
 import { Token } from '../types/schema'
 
 export const ZERO_ADDRESS = Address.fromString('0x0000000000000000000000000000000000000000')
-export const FACTORY_ADDRESS_STRING = '0xBCfCcbde45cE874adCB698cC183deBcF17952812'
+export const FACTORY_ADDRESS_STRING = '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73'
 
 export let ZERO_BI = BigInt.fromI32(0)
 export let ONE_BI = BigInt.fromI32(1)
