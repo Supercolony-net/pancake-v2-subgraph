@@ -1,6 +1,6 @@
 /* eslint-disable prefer-const */
 import { log } from '@graphprotocol/graph-ts'
-import { UniswapFactory, Pair, Token, Bundle } from '../types/schema'
+import { UniswapFactory, Pair, Token, Bundle, GetPair } from '../types/schema'
 import { PairCreated } from '../types/Factory/Factory'
 import { Pair as PairTemplate } from '../types/templates'
 import {
@@ -71,7 +71,8 @@ export function handleNewPair(event: PairCreated): void {
     token1.txCount = ZERO_BI
   }
 
-  const pair = new Pair(event.params.pair.toHexString()) as Pair
+  const pairId = event.params.pair.toHexString();
+  const pair = new Pair(pairId) as Pair
   pair.token0 = token0Id
   pair.token1 = token1Id
   pair.createdAtTimestamp = event.block.timestamp
@@ -90,6 +91,12 @@ export function handleNewPair(event: PairCreated): void {
   pair.token0Price = ZERO_BD
   pair.token1Price = ZERO_BD
 
+  const token0token1 = new GetPair(token0Id.concat(token1Id))
+  token0token1.pair = pairId
+
+  const token1token0 = new GetPair(token1Id.concat(token0Id))
+  token1token0.pair = pairId
+
   // create the tracked contract based on the template
   PairTemplate.create(event.params.pair)
 
@@ -98,4 +105,6 @@ export function handleNewPair(event: PairCreated): void {
   token1.save()
   pair.save()
   factory.save()
+  token0token1.save()
+  token1token0.save()
 }

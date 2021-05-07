@@ -1,8 +1,7 @@
 /* eslint-disable prefer-const */
-import { Pair, Token, Bundle } from '../types/schema'
-import { BigDecimal, Address } from '@graphprotocol/graph-ts/index'
-import { ZERO_BD, ZERO_ADDRESS, FACTORY_ADDRESS_STRING } from './helpers'
-import { Factory as FactoryContract } from '../types/templates/Pair/Factory'
+import { Pair, Token, GetPair } from '../types/schema'
+import { BigDecimal } from '@graphprotocol/graph-ts/index'
+import { ZERO_BD } from './helpers'
 
 const WBNB_ADDRESS = '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c'
 const BUSD_WBNB_PAIR = '0x1b96b92314c44b159149f7e0303511fb2fc4774f' // created block 589414
@@ -70,11 +69,9 @@ export function findEthPerToken(token: Token): BigDecimal {
   }
   // loop through whitelist and check if paired with any
   for (let i = 0; i < WHITELIST.length; ++i) {
-    // TODO: Remove rpc call by storing pairs
-    let factoryContract = FactoryContract.bind(Address.fromString(FACTORY_ADDRESS_STRING))
-    let pairAddress = factoryContract.getPair(Address.fromString(token.id), Address.fromString(WHITELIST[i]))
-    if (!pairAddress.equals(ZERO_ADDRESS)) {
-      let pair = Pair.load(pairAddress.toHexString())!
+    let getPair = GetPair.load(token.id.concat(WHITELIST[i]))
+    if (getPair != null) {
+      let pair = Pair.load(getPair.pair)!
       if (pair.token0 == token.id && pair.reserveETH.gt(MINIMUM_LIQUIDITY_THRESHOLD_ETH)) {
         let token1 = Token.load(pair.token1)!
         return pair.token1Price.times(token1.derivedETH as BigDecimal) // return token1 per our token * Eth per token 1
