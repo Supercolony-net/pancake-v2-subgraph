@@ -1,6 +1,6 @@
 /* eslint-disable prefer-const */
 import { log } from '@graphprotocol/graph-ts'
-import { UniswapFactory, Pair, Token, Bundle, GetPair } from '../types/schema'
+import { UniswapFactory, Pair, Token, Bundle } from '../types/schema'
 import { PairCreated } from '../types/Factory/Factory'
 import { Pair as PairTemplate } from '../types/templates'
 import {
@@ -8,6 +8,7 @@ import {
   ZERO_BI,
   fetchToken, FACTORY_ADDRESS_STRING
 } from './helpers'
+import { isOnWhitelist } from './pricing'
 
 export function handleNewPair(event: PairCreated): void {
   // load factory (create if first exchange)
@@ -51,6 +52,7 @@ export function handleNewPair(event: PairCreated): void {
     token0.untrackedVolumeUSD = ZERO_BD
     token0.totalLiquidity = ZERO_BD
     // token0.allPairs = []
+    token0.whitelist = []
     token0.txCount = ZERO_BI
   }
 
@@ -68,6 +70,7 @@ export function handleNewPair(event: PairCreated): void {
     token1.untrackedVolumeUSD = ZERO_BD
     token1.totalLiquidity = ZERO_BD
     // token1.allPairs = []
+    token1.whitelist = []
     token1.txCount = ZERO_BI
   }
 
@@ -91,11 +94,17 @@ export function handleNewPair(event: PairCreated): void {
   pair.token0Price = ZERO_BD
   pair.token1Price = ZERO_BD
 
-  const token0token1 = new GetPair(token0Id.concat(token1Id))
-  token0token1.pair = pairId
+  if (isOnWhitelist(token1.id)) {
+    let white0 = token0.whitelist
+    white0.push(event.params.pair.toHexString())
+    token0.whitelist = white0
+  }
 
-  const token1token0 = new GetPair(token1Id.concat(token0Id))
-  token1token0.pair = pairId
+  if (isOnWhitelist(token0.id)) {
+    let white1 = token1.whitelist
+    white1.push(event.params.pair.toHexString())
+    token1.whitelist = white1
+  }
 
   // create the tracked contract based on the template
   PairTemplate.create(event.params.pair)
@@ -105,6 +114,4 @@ export function handleNewPair(event: PairCreated): void {
   token1.save()
   pair.save()
   factory.save()
-  token0token1.save()
-  token1token0.save()
 }

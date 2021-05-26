@@ -1,28 +1,24 @@
-# PancakeSwap v2 Subgraph
+# QuickSwap Subgraph
 
-[PancakeSwap](https://pancakeswap.finance/) is a decentralized protocol for automated token exchange on Binance Smart Chain.
+This repository has been forked from [UniswapV2]()
 
-This subgraph dynamically tracks any pair created by the uniswap factory. It tracks of the current state of PancakeSwap contracts, and contains derived stats for things like historical data and USD prices.
+This subgraph dynamically tracks any pair created by the QuickSwap factory. It tracks of the current state of QuickSwap contracts, and contains derived stats for things like historical data and USD prices.
 
 - aggregated data across pairs and tokens,
 - data on individual pairs and tokens,
 - data on transactions
 - data on liquidity providers
-- historical data on PancakeSwap, pairs or tokens, aggregated by day
+- historical data on QuickSwap, pairs or tokens, aggregated by day
 
 ## Running Locally
 
 Make sure to update package.json settings to point to your own graph account.
 
-## Queries
-
-Below are a few ways to show how to query the uniswap-subgraph for data. The queries show most of the information that is queryable, but there are many other filtering options that can be used, just check out the [querying api](https://thegraph.com/docs/graphql-api). These queries can be used locally or in The Graph Explorer playground.
-
 ## Key Entity Overviews
 
-#### UniswapFactory
+#### QuickSwapFactory
 
-Contains data across all of PancakeSwap v2. This entity tracks important things like total liquidity (in ETH and USD, see below), all time volume, transaction count, number of pairs and more.
+Contains data across all of QuickSwap V2. This entity tracks important things like total liquidity (in ETH and USD, see below), all time volume, transaction count, number of pairs and more.
 
 #### Token
 
@@ -34,7 +30,7 @@ Contains data on a specific pair.
 
 #### Transaction
 
-Every transaction on PancakeSwap is stored. Each transaction contains an array of mints, burns, and swaps that occured within it.
+Every transaction on QuickSwap is stored. Each transaction contains an array of mints, burns, and swaps that occured within it.
 
 #### Mint, Burn, Swap
 
@@ -42,13 +38,13 @@ These contain specifc information about a transaction. Things like which pair tr
 
 ## Example Queries
 
-### Querying Aggregated PancakeSwap Data
+### Querying Aggregated QuickSwap Data
 
-This query fetches aggregated data from all Pancakeswap pairs and tokens, to capture activity throughout the entire protocol.
+This query fetches aggredated data from all QuickSwap pairs and tokens, to give a view into how much activity is happening within the whole protocol.
 
 ```graphql
 {
-  uniswapFactories(first: 1) {
+  QuickSwapFactories(first: 1) {
     pairCount
     totalVolumeUSD
     totalLiquidityUSD

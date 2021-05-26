@@ -37,6 +37,9 @@ type Token @entity {
   tradeVolumeUSD: BigDecimal!
   untrackedVolumeUSD: BigDecimal!
 
+  # for teacking volume
+  whitelist: [String]!
+
   # transactions across all pairs
   txCount: BigInt!
 
@@ -259,9 +262,4 @@ type TokenDayData @entity {
 
   # price stats
   priceUSD: BigDecimal!
-}
-
-type GetPair @entity {
-  id: ID!
-  pair: Pair!
 }

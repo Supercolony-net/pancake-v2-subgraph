@@ -1,85 +1,68 @@
 /* eslint-disable prefer-const */
-import { Pair, Token, GetPair } from '../types/schema'
+import { Pair, Token } from '../types/schema'
 import { BigDecimal } from '@graphprotocol/graph-ts/index'
 import { ZERO_BD } from './helpers'
 
-const WBNB_ADDRESS = '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c'
-const BUSD_WBNB_PAIR = '0x1b96b92314c44b159149f7e0303511fb2fc4774f' // created block 589414
-const USDT_WBNB_PAIR = '0x20bcc3b8a0091ddac2d0bc30f68e6cbb97de59cd' // created block 648115
+const WETH_ADDRESS = '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619'
+const USDC_WETH_PAIR = '0x853ee4b2a13f8a742d64c8f088be7ba2131f670d' // created 10008355
+const DAI_WETH_PAIR = '0x4a35582a710e1f4b2030a3f826da20bfb6703c09' // created block 10042267
+const USDT_WETH_PAIR = '0xf6422b997c7f54d1c6a6e103bcb1499eea0a7046' // created block 10093341
 
 export function getEthPriceInUSD(pair: Pair): BigDecimal {
-  // fetch eth prices for each stablecoin
-  let usdtPair: Pair | null;
-  if (pair.id == USDT_WBNB_PAIR) {
-    usdtPair = pair;
-  } else {
-    usdtPair = Pair.load(USDT_WBNB_PAIR)
+  //For now we will only use USDC_WETH pair for ETH prices
+  let usdcPair = Pair.load(USDC_WETH_PAIR);
+  if (usdcPair !== null) {
+    return usdcPair.token0Price
   }
-
-  let busdPair: Pair | null;
-  if (pair.id == BUSD_WBNB_PAIR) {
-    busdPair = pair;
-  } else {
-    busdPair = Pair.load(BUSD_WBNB_PAIR)
-  }
-
-  // usdt is token0
-  // busd is token1
-  if (busdPair !== null && usdtPair !== null) {
-    const busdtReserve = busdPair.reserve0;
-    const usdtReserve = usdtPair.reserve1;
-    let totalLiquidityBNB = busdtReserve.plus(usdtReserve)
-    let busdWeight = busdtReserve.div(totalLiquidityBNB)
-    let usdtWeight = usdtReserve.div(totalLiquidityBNB)
-    return busdPair.token1Price.times(busdWeight).plus(usdtPair.token0Price.times(usdtWeight))
-    // usdt is the only pair so far
-  } else if (busdPair !== null) {
-    return busdPair.token1Price
-  } else if (usdtPair !== null) {
-    return usdtPair.token0Price
-  } else {
+  else {
     return ZERO_BD
   }
 }
 
 // token where amounts should contribute to tracked volume and liquidity
 let WHITELIST: string[] = [
-  '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c', // WBNB
-  '0xe9e7cea3dedca5984780bafc599bd69add087d56', // BUSD
-  '0x55d398326f99059ff775485246999027b3197955', // USDT
-  '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d', // USDC
-  '0x23396cf899ca06c4472205fc903bdb4de249d6fc', // UST
-  '0x1af3f329e8be154074d8769d1ffa4ee058b1dbc3', // DAI
-  '0x4bd17003473389a42daf6a0a729f6fdb328bbbd7', // VAI
-  '0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c', // BTCB
-  '0x2170ed0880ac9a755fd29b2688956bd959f933f8', // WETH
-  '0x250632378e573c6be1ac2f97fcdf00515d0aa91b', // BETH
+  '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619', // WETH
+  '0x2791bca1f2de4661ed88a30c99a7a9449aa84174', // USDC
+  '0x831753dd7087cac61ab5644b308642cc1c33dc13', //QUICK
+  '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270', //WMATIC
+  '0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6', //WBTC
+  '0x8f3cf7ad23cd3cadbd9735aff958023239c6a063', // DAI
+  '0xc2132d05d31c914a87c6611c10748aeb04b58e8f', // USDT
+  '0x9719d867a500ef117cc201206b8ab51e794d3f82', //MAUSDC
+  '0x104592a158490a9228070e0a8e5343b499e125d0', //FRAX
+  '0x033d942a6b495c4071083f4cde1f17e986fe856c' //AGA
 ]
 
+export function isOnWhitelist(token: string): boolean {
+  for(let i = 0; i < WHITELIST.length; i++) {
+    if(token == WHITELIST[i]) return true
+  }
+  return false
+}
+
 // minimum liquidity for price to get tracked
-const MINIMUM_LIQUIDITY_THRESHOLD_ETH = BigDecimal.fromString('2')
+const MINIMUM_LIQUIDITY_THRESHOLD_ETH = BigDecimal.fromString('1')
 
 /**
  * Search through graph to find derived Eth per token.
  * @todo update to be derived ETH (add stablecoin estimates)
  **/
 export function findEthPerToken(token: Token): BigDecimal {
-  if (token.id == WBNB_ADDRESS) {
+  if (token.id == WETH_ADDRESS) {
     return BigDecimal.fromString('1')
   }
   // loop through whitelist and check if paired with any
-  for (let i = 0; i < WHITELIST.length; ++i) {
-    let getPair = GetPair.load(token.id.concat(WHITELIST[i]))
-    if (getPair != null) {
-      let pair = Pair.load(getPair.pair)!
-      if (pair.token0 == token.id && pair.reserveETH.gt(MINIMUM_LIQUIDITY_THRESHOLD_ETH)) {
-        let token1 = Token.load(pair.token1)!
-        return pair.token1Price.times(token1.derivedETH as BigDecimal) // return token1 per our token * Eth per token 1
-      }
-      if (pair.token1 == token.id && pair.reserveETH.gt(MINIMUM_LIQUIDITY_THRESHOLD_ETH)) {
-        let token0 = Token.load(pair.token0)!
-        return pair.token0Price.times(token0.derivedETH as BigDecimal) // return token0 per our token * ETH per token 0
-      }
+  let whitelist = token.whitelist;
+  for (let i = 0; i < whitelist.length; ++i) {
+    let pairAddress = whitelist[i];
+    let pair = Pair.load(pairAddress)!
+    if (pair.token0 == token.id && pair.reserveETH.gt(MINIMUM_LIQUIDITY_THRESHOLD_ETH)) {
+      let token1 = Token.load(pair.token1)!
+      return pair.token1Price.times(token1.derivedETH as BigDecimal) // return token1 per our token * Eth per token 1
+    }
+    if (pair.token1 == token.id && pair.reserveETH.gt(MINIMUM_LIQUIDITY_THRESHOLD_ETH)) {
+      let token0 = Token.load(pair.token0)!
+      return pair.token0Price.times(token0.derivedETH as BigDecimal) // return token0 per our token * ETH per token 0
     }
   }
   return ZERO_BD // nothing was found return 0

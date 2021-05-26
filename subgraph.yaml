@@ -1,16 +1,16 @@
 specVersion: 0.0.2
-description: PancakeSwap is a decentralized protocol for automated token exchange on Binance Smart Chain.
-repository: https://github.com/pancakeswap/pancakeswap-v2-subgraph
+description: Quickswap is a decentralized protocol for automated token exchange on Matic.
+repository: https://github.com/QuickSwap/QuickSwap-subgraph.git
 schema:
   file: ./schema.graphql
 dataSources:
   - kind: ethereum/contract
     name: Factory
-    network: mainnet
+    network: matic
     source:
-      address: '0xBCfCcbde45cE874adCB698cC183deBcF17952812'
+      address: '0x5757371414417b8C6CAad45bAeF941aBc7d3Ab32'
       abi: Factory
-      startBlock: 586851
+      startBlock: 5484576
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.4
@@ -34,7 +34,7 @@ dataSources:
 templates:
   - kind: ethereum/contract
     name: Pair
-    network: mainnet
+    network: matic
     source:
       abi: Pair
     mapping:
